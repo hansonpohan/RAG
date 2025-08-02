@@ -99,7 +99,7 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 python app.py
 ```
 
-應用將在 `http://localhost:5000` 啟動。
+應用將在 `http://localhost:5001` 啟動。
 
 ## 📁 項目結構
 
@@ -152,7 +152,7 @@ rag-flask-app/
 
 ## 🎯 使用方法
 
-1. **打開瀏覽器**訪問 `http://localhost:5000`
+1. **打開瀏覽器**訪問 `http://localhost:5001`
 2. **輸入問題**到文本框中
 3. **點擊「發送查詢」**按鈕
 4. **查看結果**：AI 會基於檢索到的相關文檔回答您的問題
