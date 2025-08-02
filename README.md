@@ -61,7 +61,7 @@ pip install -r requirements.txt
 確保您的 Pinecone 環境中已經創建了索引：
 
 - **索引名稱**：`text`
-- **維度**：384（對應 all-MiniLM-L6-v2 模型）
+- **維度**：1024（對應 sentence-transformers/all-roberta-large-v1 模型）
 - **距離度量**：cosine
 - **雲端區域**：us-east-1
 
@@ -167,7 +167,7 @@ rag-flask-app/
 ```json
 {
     "id": "document_1",
-    "values": [0.1, 0.2, ...],  // 384 維向量
+    "values": [0.1, 0.2, ...],  // 1024 維向量
     "metadata": {
         "text": "這是文檔的實際內容文本"
     }
