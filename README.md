@@ -18,7 +18,7 @@
 
 ### 核心組件
 
-1. **向量嵌入**：SentenceTransformer (`all-MiniLM-L6-v2`)
+1. **向量嵌入**：SentenceTransformer (`all-roberta-large-v1`)
 2. **向量存儲**：Pinecone Vector Database
 3. **語言模型**：Google Gemini Pro
 4. **Web框架**：Flask
@@ -181,7 +181,7 @@ from sentence_transformers import SentenceTransformer
 import pinecone
 
 # 初始化模型和 Pinecone
-model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+model = SentenceTransformer('sentence-transformers/all-roberta-large-v1')
 pc = pinecone.Pinecone(api_key="your-api-key")
 index = pc.Index("text")
 
