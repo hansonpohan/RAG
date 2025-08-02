@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG 演示應用</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .tab {
+            padding: 15px 30px;
+            background: none;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .tab.active {
+            color: #4f46e5;
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #4f46e5;
+        }
+
+        .tab:hover {
+            color: #4f46e5;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .query-input, .file-input, select, input[type="number"], input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .query-input {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .query-input:focus, .file-input:focus, select:focus, input:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .file-input {
+            padding: 12px;
+            background: #f9fafb;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            margin-left: 10px;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ffffff;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result-section {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .result-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .result-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .result-title::before {
+            content: '🤖';
+            margin-right: 10px;
+            font-size: 1.5rem;
+        }
+
+        .answer-content {
+            line-height: 1.8;
+            color: #334155;
+            white-space: pre-wrap;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #4f46e5;
+        }
+
+        .debug-section {
+            margin-top: 20px;
+        }
+
+        .debug-toggle {
+            background: #6b7280;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .debug-toggle:hover {
+            background: #4b5563;
+        }
+
+        .debug-content {
+            display: none;
+            margin-top: 15px;
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+        }
+
+        .chunk-item {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #374151;
+            border-radius: 8px;
+            border-left: 3px solid #10b981;
+        }
+
+        .chunk-score {
+            color: #10b981;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .error-message, .success-message {
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .error-message {
+            background: #fee2e2;
+            color: #dc2626;
+            border-left: 4px solid #dc2626;
+        }
+
+        .success-message {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+
+        .health-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 1000;
+        }
+
+        .health-online {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #10b981;
+        }
+
+        .health-offline {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #dc2626;
+        }
+
+        .advanced-settings {
+            background: #f3f4f6;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .settings-toggle {
+            background: #e5e7eb;
+            color: #374151;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        .settings-toggle:hover {
+            background: #d1d5db;
+        }
+
+        .settings-toggle.active {
+            background: #4f46e5;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .main-content {
+                padding: 20px;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+
+            .tab {
+                padding: 12px 20px;
+            }
+
+            .settings-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="health-status" id="healthStatus">檢查中...</div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>🔍 RAG 演示應用</h1>
+            <p>基於 Pinecone + Gemini 的檢索增強生成系統</p>
+        </div>
+
+        <div class="main-content">
+            <!-- 分頁標籤 -->
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('query')">查詢問答</button>
+                <button class="tab" onclick="switchTab('upload')">檔案上傳</button>
+            </div>
+
+            <!-- 查詢分頁 -->
+            <div id="queryTab" class="tab-content active">
+                <div class="query-section">
+                    <div class="form-group">
+                        <label for="queryInput">請輸入您的問題：</label>
+                        <textarea 
+                            id="queryInput" 
+                            class="query-input" 
+                            placeholder="例如：什麼是人工智能？或者您想了解的任何主題..."
+                            rows="4"
+                        ></textarea>
+                    </div>
+                    
+                    <button id="submitBtn" class="submit-btn" onclick="submitQuery()">
+                        發送查詢
+                        <div class="loading" id="loading">
+                            <div class="spinner"></div>
+                        </div>
+                    </button>
+                </div>
+
+                <div id="resultSection" class="result-section">
+                    <div class="result-card">
+                        <div class="result-title">AI 回答</div>
+                        <div id="answerContent" class="answer-content"></div>
+                    </div>
+
+                    <div class="debug-section">
+                        <button class="debug-toggle" onclick="toggleDebug()">顯示/隱藏 調試信息</button>
+                        <div id="debugContent" class="debug-content">
+                            <div id="debugInfo"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="errorSection" style="display: none;">
+                    <div class="error-message" id="errorMessage"></div>
+                </div>
+            </div>
+
+            <!-- 上傳分頁 -->
+            <div id="uploadTab" class="tab-content">
+                <div class="upload-section">
+                    <div class="form-group">
+                        <label for="fileInput">選擇檔案：</label>
+                        <input type="file" id="fileInput" class="file-input" accept=".txt,.pdf,.csv,.json">
+                        <small style="color: #6b7280; margin-top: 5px; display: block;">
+                            支援格式：TXT, PDF, CSV, JSON（最大 16MB）
+                        </small>
+                    </div>
+
+                    <div class="advanced-settings">
+                        <button class="settings-toggle" onclick="toggleAdvancedSettings()">
+                            進階設定
+                        </button>
+                        
+                        <div id="advancedSettings" class="settings-grid" style="display: none;">
+                            <div class="form-group">
+                                <label for="splitBy">分割方式：</label>
+                                <select id="splitBy">
+                                    <option value="char">按字符分割</option>
+                                    <option value="line">按行分割</option>
+                                    <option value="sentence">按句子分割</option>
+                                    <option value="paragraph">按段落分割</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="contentType">內容類型：</label>
+                                <select id="contentType">
+                                    <option value="general">一般文本</option>
+                                    <option value="technical">技術文件</option>
+                                    <option value="academic">學術文章</option>
+                                    <option value="legal">法律文件</option>
+                                    <option value="narrative">故事文本</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="chunkSize">Chunk 大小：</label>
+                                <input type="number" id="chunkSize" placeholder="留空自動計算" min="100" max="2000">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="overlapSize">重疊大小：</label>
+                                <input type="number" id="overlapSize" placeholder="留空自動計算" min="0" max="500">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="textColumn">文本欄位 (CSV)：</label>
+                                <input type="text" id="textColumn" placeholder="留空自動選擇">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="uploadBtn" class="submit-btn" onclick="uploadFile()">
+                        上傳檔案
+                        <div class="loading" id="uploadLoading">
+                            <div class="spinner"></div>
+                        </div>
+                    </button>
+                </div>
+
+                <div id="uploadResultSection" style="display: none;">
+                    <div id="uploadResult"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let debugVisible = false;
+        let advancedSettingsVisible = false;
+
+        // 頁面加載時檢查健康狀態
+        window.onload = function() {
+            checkHealth();
+            setInterval(checkHealth, 30000);
+        };
+
+        // 分頁切換
+        function switchTab(tabName) {
+            // 隱藏所有分頁內容
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 移除所有標籤的 active 狀態
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 顯示選中的分頁
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // 切換進階設定
+        function toggleAdvancedSettings() {
+            const settings = document.getElementById('advancedSettings');
+            const toggle = document.querySelector('.settings-toggle');
+            
+            advancedSettingsVisible = !advancedSettingsVisible;
+            settings.style.display = advancedSettingsVisible ? 'grid' : 'none';
+            toggle.classList.toggle('active', advancedSettingsVisible);
+        }
+
+        // 健康檢查
+        async function checkHealth() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                const statusElement = document.getElementById('healthStatus');
+                
+                if (data.healthy) {
+                    statusElement.textContent = '🟢 服務正常';
+                    statusElement.className = 'health-status health-online';
+                } else {
+                    statusElement.textContent = '🔴 服務異常';
+                    statusElement.className = 'health-status health-offline';
+                }
+            } catch (error) {
+                const statusElement = document.getElementById('healthStatus');
+                statusElement.textContent = '🔴 連接失敗';
+                statusElement.className = 'health-status health-offline';
+            }
+        }
+
+        // 提交查詢
+        async function submitQuery() {
+            const queryInput = document.getElementById('queryInput');
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const resultSection = document.getElementById('resultSection');
+            const errorSection = document.getElementById('errorSection');
+            
+            const query = queryInput.value.trim();
+            
+            if (!query) {
+                alert('請輸入問題！');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            loading.style.display = 'inline-block';
+            resultSection.style.display = 'none';
+            errorSection.style.display = 'none';
+
+            try {
+                const response = await fetch('/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayResult(data);
+                } else {
+                    showError(data.error || '未知錯誤');
+                }
+            } catch (error) {
+                showError('網絡錯誤：' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+
+        // 上傳檔案
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const uploadLoading = document.getElementById('uploadLoading');
+            const uploadResultSection = document.getElementById('uploadResultSection');
+            
+            if (!fileInput.files[0]) {
+                alert('請選擇檔案！');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
+            // 添加進階設定參數
+            const splitBy = document.getElementById('splitBy').value;
+            const contentType = document.getElementById('contentType').value;
+            const chunkSize = document.getElementById('chunkSize').value;
+            const overlapSize = document.getElementById('overlapSize').value;
+            const textColumn = document.getElementById('textColumn').value;
+            
+            formData.append('split_by', splitBy);
+            formData.append('content_type', contentType);
+            if (chunkSize) formData.append('chunk_size', chunkSize);
+            if (overlapSize) formData.append('overlap_size', overlapSize);
+            if (textColumn) formData.append('text_column', textColumn);
+
+            uploadBtn.disabled = true;
+            uploadLoading.style.display = 'inline-block';
+            uploadResultSection.style.display = 'none';
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                uploadResultSection.style.display = 'block';
+                
+                if (data.success) {
+                    uploadResultSection.innerHTML = `
+                        <div class="success-message">
+                            ✅ ${data.message}
+                        </div>
+                    `;
+                } else {
+                    uploadResultSection.innerHTML = `
+                        <div class="error-message">
+                            ❌ ${data.error}
+                        </div>
+                    `;
+                }
+                
+                // 清空檔案輸入
+                fileInput.value = '';
+                
+            } catch (error) {
+                uploadResultSection.style.display = 'block';
+                uploadResultSection.innerHTML = `
+                    <div class="error-message">
+                        ❌ 上傳失敗：${error.message}
+                    </div>
+                `;
+            } finally {
+                uploadBtn.disabled = false;
+                uploadLoading.style.display = 'none';
+            }
+        }
+
+        // 顯示查詢結果
+        function displayResult(data) {
+            const resultSection = document.getElementById('resultSection');
+            const answerContent = document.getElementById('answerContent');
+            const debugInfo = document.getElementById('debugInfo');
+
+            answerContent.textContent = data.answer;
+
+            let debugHtml = `
+                <div><strong>原始查詢：</strong> ${data.query}</div>
+                <div><strong>檢索到的文檔片段數量：</strong> ${data.debug_info.num_chunks}</div>
+                <div style="margin-top: 15px;"><strong>檢索到的文檔片段：</strong></div>
+            `;
+
+            data.retrieved_chunks.forEach((chunk, index) => {
+                debugHtml += `
+                    <div class="chunk-item">
+                        <div class="chunk-score">片段 ${index + 1} - 相似度: ${chunk.score.toFixed(4)}</div>
+                        <div>${chunk.text}</div>
+                    </div>
+                `;
+            });
+
+            debugHtml += `
+                <div style="margin-top: 15px;"><strong>完整上下文：</strong></div>
+                <pre style="background: #4b5563; padding: 15px; border-radius: 5px; white-space: pre-wrap;">${data.debug_info.context}</pre>
+            `;
+
+            debugInfo.innerHTML = debugHtml;
+            resultSection.style.display = 'block';
+        }
+
+        // 顯示錯誤
+        function showError(message) {
+            const errorSection = document.getElementById('errorSection');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            errorMessage.textContent = message;
+            errorSection.style.display = 'block';
+        }
+
+        // 切換調試信息顯示
+        function toggleDebug() {
+            const debugContent = document.getElementById('debugContent');
+            debugVisible = !debugVisible;
+            debugContent.style.display = debugVisible ? 'block' : 'none';
+        }
+
+        // 允許 Enter 鍵提交 (Ctrl+Enter)
+        document.getElementById('queryInput').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                submitQuery();
+            }
+        });
+    </script>
+</body>
+</html>
